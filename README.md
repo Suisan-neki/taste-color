@@ -73,12 +73,6 @@
 
 ---
 
-### 3.2 相関ヒートマップ
-
-![相関ヒートマップ](sandbox:/mnt/data/BISBAS_correlation_heatmap.png)
-
----
-
 ## 4. 考察
 
 * **BISとBias_B（黒の錯覚）** に中程度の**負の相関（r = −0.37）**が見られた。
