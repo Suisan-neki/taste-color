@@ -1,0 +1,72 @@
+import pandas as pd
+import numpy as np
+from scipy.stats import pearsonr
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+# ===== データ入力 =====
+participants = [57,112,58,60,90,99,63,97,56,85,61,66,93,74,67,77,88,108,78,59,69]
+
+# 見た目苦味
+R_visual = [0,7.2,0,2.3,1.4,0,0,0,0.3,0,6,0,1.4,0.4,4,0.8,0.9,0.3,4.9,2.4,0.5]
+B_visual = [8.4,9.1,8.3,7.7,8.7,0,7,5.2,10,6.4,7.4,4.8,9.8,6.7,8.9,9.4,2.3,8.8,8.2,10,3.3]
+
+# 実際の苦味 (5,6)
+R5 = [1.7,3.5,5.3,6.1,None,10,None,0.7,10,0.4,0,9.1,0,0.3,5,7.3,1.1,5.6,4.9,1.7,2.5]
+R6 = [9.1,7.8,10,7.4,None,2.3,None,2.4,9.5,4,0.6,9,4,7.1,6.7,10,1.2,5.8,8.2,6.5,7.7]
+B5 = [6.3,0.3,2.3,7.2,None,8.9,None,0,0,0.7,0.6,3.3,1.9,0.4,1,1,0,3.9,3,1.6,2.4]
+B6 = [5.7,7.5,4.2,5.9,None,10,None,1.4,5,1.5,1.7,2.2,2.5,3.7,2.3,10,1.4,5.8,8.5,7.9,9.1]
+
+# BIS/BAS
+BIS = [2.71,3.14,2.14,3,3.29,3.57,None,3.43,2.29,3.86,3,3.29,3,3,2.14,3.71,2.71,None,2.57,3.71,3.71]
+BAS1 = [2.5,2.75,2.5,2.75,3.75,4,None,3,3.75,3,3.25,2,3.25,2.75,3.25,2.75,2.5,None,3.25,4,2.75]
+BAS2 = [3.6,3.2,4,3,3.6,4,None,3.4,4,3.6,2.2,3,3.8,2.8,4,3.4,3.4,None,3,3.8,3.4]
+BAS3 = [3,2,3.75,2.75,2.75,3.75,None,1.75,4,2.25,3.25,2.75,3,2.5,3.75,3.25,2.75,None,3,2.75,3.25]
+
+# ===== データ整理 =====
+df = pd.DataFrame({
+    "ID": participants,
+    "R_visual": R_visual,
+    "B_visual": B_visual,
+    "R5": R5,
+    "R6": R6,
+    "B5": B5,
+    "B6": B6,
+    "BIS": BIS,
+    "BAS1": BAS1,
+    "BAS2": BAS2,
+    "BAS3": BAS3
+})
+
+# 欠損除外
+df = df[~df["ID"].isin([90,63,108])].reset_index(drop=True)
+
+# 実際の平均苦味
+df["R_actual_mean"] = df[["R5","R6"]].astype(float).mean(axis=1)
+df["B_actual_mean"] = df[["B5","B6"]].astype(float).mean(axis=1)
+
+# 錯覚指標
+df["Bias_R"] = df["R_visual"] - df["R_actual_mean"]
+df["Bias_B"] = df["B_visual"] - df["B_actual_mean"]
+df["Bias_Diff"] = df["Bias_B"] - df["Bias_R"]
+
+# 相関分析
+from scipy.stats import pearsonr
+corr_data = []
+for t in ["BIS","BAS1","BAS2","BAS3"]:
+    for b in ["Bias_R","Bias_B","Bias_Diff"]:
+        valid = df[[t,b]].dropna()
+        if len(valid) > 2:
+            r, p = pearsonr(valid[t], valid[b])
+            corr_data.append({"Trait": t, "Bias": b, "r": round(r,3), "p": round(p,3)})
+
+corr_df = pd.DataFrame(corr_data)
+
+# 可視化
+pivot = corr_df.pivot(index="Trait", columns="Bias", values="r")
+import seaborn as sns
+plt.figure(figsize=(6,4))
+sns.heatmap(pivot, annot=True, cmap="RdBu_r", center=0, vmin=-1, vmax=1, fmt=".2f")
+plt.title("相関係数 (BIS/BAS × 視覚錯覚指標)")
+plt.tight_layout()
+plt.savefig("BISBAS_correlation_heatmap.png", dpi=300)
